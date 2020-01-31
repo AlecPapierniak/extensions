@@ -31,7 +31,8 @@ namespace Microsoft.Extensions.Configuration.AzureKeyVault
         /// <param name="vault">Azure KeyVault uri.</param>
         /// <param name="manager">The <see cref="IKeyVaultSecretManager"/> to use in managing values.</param>
         /// <param name="reloadInterval">The timespan to wait in between each attempt at polling the Azure KeyVault for changes. Default is null which indicates no reloading.</param>
-        public AzureKeyVaultConfigurationProvider(IKeyVaultClient client, string vault, IKeyVaultSecretManager manager, TimeSpan? reloadInterval = null)
+        /// <param name="secretsToRetrieve">A collection of secrets to retrieve from the vault. Default is null which results in all secrets being retrieved from the vault.</param>
+        public AzureKeyVaultConfigurationProvider(IKeyVaultClient client, string vault, IKeyVaultSecretManager manager, TimeSpan? reloadInterval = null, IEnumerable secretsToRetrieve = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _vault = vault ?? throw new ArgumentNullException(nameof(vault));
@@ -90,6 +91,14 @@ namespace Microsoft.Extensions.Configuration.AzureKeyVault
 
             foreach (var secret in allSecrets)
             {
+                if (secretsToRetrieve != null && secretsToRetrieve.Count > 0)
+                {
+                    if (!secretsToRetrieve.Any(s => secret.Identifier.Name.Contains(s)))
+                    {
+                        continue;
+                    }
+                }
+
                 if (!_manager.Load(secret) || secret.Attributes?.Enabled != true)
                 {
                     continue;
